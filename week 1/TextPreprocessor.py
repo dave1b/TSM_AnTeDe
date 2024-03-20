@@ -16,32 +16,33 @@ import multiprocessing as mp
 
 from sklearn.base import TransformerMixin, BaseEstimator
 
+
 # inspired by:
 # https://towardsdatascience.com/text-preprocessing-steps-and-universal-pipeline-94233cb6725a
 # https://www.kdnuggets.com/2018/03/text-data-preprocessing-walkthrough-python.html
 
 class TextPreprocessor(BaseEstimator, TransformerMixin):
     def __init__(self,
-                 language = "english",
-                 unicodedata = True,
-                 clean_html = False,
-                 replace_contractions = True,
-                 remove_numbers = True,
-                 punctuations = None,
-                 stopwords = None,
-                 pos_tags = None,
-                 lemmatize = True,
-                 stem = False,
-                 min_length = 1,
-                 max_length = 15,
-                 n_jobs = 1):
+                 language="english",
+                 unicodedata=True,
+                 clean_html=False,
+                 replace_contractions=True,
+                 remove_numbers=True,
+                 punctuations=None,
+                 stopwords=None,
+                 pos_tags=None,
+                 lemmatize=True,
+                 stem=False,
+                 min_length=1,
+                 max_length=15,
+                 n_jobs=1):
         """
         Text preprocessing transformer includes steps:
             1. Text normalization and cleanup
             2. POS tag retention
             3. Lemmatization
             4. Stemming
-        
+
         language - the language
         unicodedata - makes sure characters which look identical are identical (é -> e)
         clean_html - cleans up HTLM tags
@@ -98,11 +99,11 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
 
     def preprocess_text(self, text):
         return ' '.join(self.normalize(text))
-    
+
     def _get_wordnet_pos(self, tag):
         """Map POS tag to first character lemmatize() accepts"""
         tag = tag[0].upper()
-    
+
         if tag == "J":
             return wordnet.ADJ
         elif tag == "N":
@@ -113,24 +114,24 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
             return wordnet.ADV
         else:
             return wordnet.NOUN
- 
+
     def _tag(self, text):
         tags = [self._get_wordnet_pos(nltk.pos_tag([w])[0][1][0]) for w in text]
-        
-        #tagger = PerceptronTagger()
-        #tags = tagger.tag(text)
-        #tags = [self._get_wordnet_pos(tag[1]) for tag in tags]
-        #tags = [self._get_wordnet_pos(map_tag('en-ptb', None, tag[1])) for tag in tags]
-        
-        #tags = pos_tag_sents(text)
-        #tags = [self._get_wordnet_pos(tag[1][0]) for tag in tags[0]]
-        
+
+        # tagger = PerceptronTagger()
+        # tags = tagger.tag(text)
+        # tags = [self._get_wordnet_pos(tag[1]) for tag in tags]
+        # tags = [self._get_wordnet_pos(map_tag('en-ptb', None, tag[1])) for tag in tags]
+
+        # tags = pos_tag_sents(text)
+        # tags = [self._get_wordnet_pos(tag[1][0]) for tag in tags[0]]
+
         return tags
-    
+
     def normalize(self, text):
-                
+
         if self.clean_html:
-            soup  = BeautifulSoup(text, 'html.parser')
+            soup = BeautifulSoup(text, 'html.parser')
             text = soup.get_text()
             '''
             text = soup.find_all(text=True)
@@ -140,59 +141,59 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
             for t in text:
                 if t.parent.name not in blacklist:
                     output.append('{}'.format(t))
-                    
+
             text = ' '.join(output)
             '''
 
         if self.unicodedata:
             text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8', 'ignore')
-               
+
         if self.replace_contractions:
             text = contractions.fix(text)
-            
+
         stop_words = None
         if self.stopwords is None:
             # use default (use none -> user provides empty set)
-            stop_words=set(stopwords.words(self.language))
+            stop_words = set(stopwords.words(self.language))
         else:
-            stop_words=self.stopwords
-        
+            stop_words = self.stopwords
+
         punct_words = None
         if self.punctuations is None:
             # use default (use none -> user provides empty set)
             punct_words = set(string.punctuation)
         else:
             punct_words = self.punctuations
-        
-        normalized = [w for w in word_tokenize(text.lower()) 
-                  if 
-                     (not w in punct_words)
-                  and
-                     (not w in stop_words)
-                  and
-                     ((not self.remove_numbers) or (not w.isdigit()))
-                  and
-                     ((self.min_length < len(w)) and (len(w) < self.max_length))
-                  ]
-        
+
+        normalized = [w for w in word_tokenize(text.lower())
+                      if
+                      (not w in punct_words)
+                      and
+                      (not w in stop_words)
+                      and
+                      ((not self.remove_numbers) or (not w.isdigit()))
+                      and
+                      ((self.min_length < len(w)) and (len(w) < self.max_length))
+                      ]
+
         tagged = None
-        if self.pos_tags is not None:  
+        if self.pos_tags is not None:
             tagged = self._tag(normalized)
-            
+
             normalized = [w for (w, tag) in zip(normalized, tagged) if tag in self.pos_tags]
             tagged = [tag for tag in tagged if tag in self.pos_tags]
-            #normalized = [w for w in normalized if self._get_wordnet_pos(w) in self.pos_tags]
-        
+            # normalized = [w for w in normalized if self._get_wordnet_pos(w) in self.pos_tags]
+
         if self.lemmatize:
             if tagged is None:
-                tagged = self._tag(normalized) 
-                
+                tagged = self._tag(normalized)
+
             lemmatizer = WordNetLemmatizer()
             normalized = [lemmatizer.lemmatize(w, tag) for (w, tag) in zip(normalized, tagged)]
-            #normalized = [lemmatizer.lemmatize(w, self._get_wordnet_pos(w)) for w in normalized]
-        
+            # normalized = [lemmatizer.lemmatize(w, self._get_wordnet_pos(w)) for w in normalized]
+
         if self.stem:
             stemmer = SnowballStemmer(self.language)
             normalized = [stemmer.stem(w) for w in normalized]
-            
+
         return normalized
