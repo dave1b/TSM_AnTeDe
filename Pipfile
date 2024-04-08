@@ -12,6 +12,9 @@ contractions = "*"
 pandas = "*"
 scikit-learn = "*"
 seaborn = "*"
+stanza = "*"
+spacy = "*"
+scipy = "<1.13.0"
 
 [dev-packages]
 
