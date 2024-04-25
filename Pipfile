@@ -15,6 +15,9 @@ seaborn = "*"
 stanza = "*"
 spacy = "*"
 scipy = "<1.13.0"
+transformers = "*"
+tf-keras = "*"
+stanfordcorenlp = "*"
 
 [dev-packages]
 
